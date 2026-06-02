@@ -136,10 +136,21 @@
     animation: item-bounce 1.6s ease-in-out infinite;
   }
 
+  .animate-store-coin-spin {
+    animation: store-coin-spin 1.8s ease-in-out infinite;
+    transform-style: preserve-3d;
+  }
+
   @keyframes item-bounce {
     0%, 100% { transform: translateY(0); }
     40% { transform: translateY(-3px); }
     60% { transform: translateY(-5px); }
+  }
+
+  @keyframes store-coin-spin {
+    0% { transform: rotateY(0deg) translateY(0); }
+    45% { transform: rotateY(180deg) translateY(-4px); }
+    100% { transform: rotateY(360deg) translateY(0); }
   }
 
   /* chess board helpers */

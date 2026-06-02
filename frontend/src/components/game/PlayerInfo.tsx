@@ -130,4 +130,4 @@ export const PlayerInfo = ({
       </div>
     </Card>
   )
-la
+}

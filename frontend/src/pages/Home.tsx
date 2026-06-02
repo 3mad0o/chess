@@ -20,7 +20,7 @@ export const Home = () => {
     <>
       <div className="relative min-h-screen">
         <div className="absolute inset-0 bg-[url('/hero.png')] bg-cover bg-center opacity-50"></div>
-        <div className="absolute   inset-0 p-4 z-50 space-y-20">
+        <div className="absolute   inset-0 p-4  space-y-20">
           {/* hero section */}
           <div className="grid md:grid-cols-3 gap-8 ">
             <div className="md:col-span-2 flex flex-col justify-center items-start gap-16 ">

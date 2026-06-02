@@ -1,8 +1,13 @@
+export type StoreItemType = 'board' | 'sticker'
+
 export type StoreItem = {
   id: number
+  type: StoreItemType
   name: string
   price: number
   imageUrl: string
-  text: string
-  soundUrl: string
+  description?: string
+  // For stickers
+  text?: string 
+  soundUrl?: string
 }

@@ -1,102 +1,146 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { StoreItem as StoreItemType } from '@/types/store'
-import { Link } from 'react-router'
 import { Card } from '../ui/card'
 import { Button } from '../ui/button'
-import { VscTriangleRight } from 'react-icons/vsc'
-import { Volume2 } from 'lucide-react'
+import { Badge } from '../ui/badge'
+import { Check, Volume2 } from 'lucide-react'
 
-export const StoreItem = ({ item }: { item: StoreItemType }) => {
+type StoreItemProps = {
+  item: StoreItemType
+  isSelected?: boolean
+  onToggle?: (item: StoreItemType) => void
+}
+
+export const StoreItem = ({ item, isSelected, onToggle }: StoreItemProps) => {
   const [isPlaying, setIsPlaying] = useState(false)
+  const [localSelected, setLocalSelected] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const canPreviewSound = Boolean(item.soundUrl)
+  const selected = isSelected ?? localSelected
+  const itemTypeLabel = item.type === 'board' ? 'Board theme' : 'Sticker'
+
+  const formattedPrice = `${item.price.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })} CP`
+  const priceAmount = item.price.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause()
+      audioRef.current = null
+    }
+  }, [])
 
   const playPreview = async () => {
-    if (isPlaying) {
+    if (isPlaying || !item.soundUrl) {
       return
     }
 
+    audioRef.current?.pause()
     setIsPlaying(true)
 
-    if (item.soundUrl) {
-      const audio = new Audio(item.soundUrl)
-      audio.addEventListener('ended', () => setIsPlaying(false))
-      audio.addEventListener('pause', () => setIsPlaying(false))
+    const audio = new Audio(item.soundUrl)
+    audioRef.current = audio
 
-      try {
-        await audio.play()
-      } catch {
-        setIsPlaying(false)
-      }
-
-      return
-    }
+    const stopPreview = () => setIsPlaying(false)
+    audio.addEventListener('ended', stopPreview, { once: true })
+    audio.addEventListener('pause', stopPreview, { once: true })
 
     try {
-      const AudioContextConstructor =
-        window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-
-      if (!AudioContextConstructor) {
-        setIsPlaying(false)
-        return
-      }
-
-      const audioCtx = new AudioContextConstructor()
-      const oscillator = audioCtx.createOscillator()
-      const gain = audioCtx.createGain()
-
-      oscillator.type = 'triangle'
-      oscillator.frequency.value = 520
-      oscillator.connect(gain)
-      gain.connect(audioCtx.destination)
-      gain.gain.setValueAtTime(0.001, audioCtx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.13, audioCtx.currentTime + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18)
-
-      oscillator.start()
-      oscillator.stop(audioCtx.currentTime + 0.2)
-      oscillator.onended = () => {
-        audioCtx.close().finally(() => setIsPlaying(false))
-      }
+      await audio.play()
     } catch {
       setIsPlaying(false)
     }
   }
 
-  return (
-    <Card className="group/card relative overflow-hidden rounded-xl border border-white/10 bg-neutral-950/90 p-5 shadow-[0_28px_90px_rgba(0,0,0,0.22)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_30px_100px_rgba(0,0,0,0.25)]">
-      <div className="relative mb-4 overflow-hidden rounded-3xl bg-linear-to-br from-[#212431] via-[#181b25] to-[#0f121a] p-6 shadow-inner shadow-black/20">
-        <span className="pointer-events-none absolute left-4 top-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.35em] text-white/70 shadow-sm backdrop-blur-sm">
-          {item.text}
-        </span>
+  const toggleItem = () => {
+    setLocalSelected(current => !current)
+    onToggle?.(item)
+  }
 
-        <div className="flex h-44 items-center justify-center">
+  return (
+    <Card
+      className={`relative gap-0 rounded-lg border bg-card p-0 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg ${
+        selected ? 'border-primary/60 ring-2 ring-primary/25' : 'border-border'
+      }`}
+    >
+      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted/45">
+        <Badge
+          variant="secondary"
+          className="absolute left-3 top-3 h-6 rounded-md bg-background/85 px-2 text-[0.7rem] font-semibold text-foreground shadow-sm"
+        >
+          {itemTypeLabel}
+        </Badge>
+
+        {selected ? (
+          <span className="absolute right-3 top-3 inline-flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+            <Check className="size-4" />
+          </span>
+        ) : null}
+
+        <div className="flex size-full items-center justify-center p-6">
           <img
             src={item.imageUrl}
             alt={item.name}
-            className="w-28 h-28 rounded-3xl border border-white/10 bg-white/5 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.22)] transition duration-500 ease-out hover:-translate-y-1 hover:scale-[1.08] hover:shadow-[0_24px_80px_rgba(0,0,0,0.32)] animate-item-bounce"
+            className="max-h-32 w-auto max-w-[72%] rounded-lg object-contain transition duration-300 group-hover/card:scale-[1.04]"
           />
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div>
-          <h3 className="text-xl font-semibold text-white">{item.name}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">CP {item.price.toFixed(2)}</p>
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        <div className="min-h-20">
+          <h3 className="text-base font-semibold leading-tight text-foreground">{item.name}</h3>
+          <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground">
+            {item.description ?? item.text ?? 'A quick expression for tense chess moments.'}
+          </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={playPreview} aria-label="Preview sound">
+        <div className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Cost</span>
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <img
+              src="/store/one_coin.png"
+              alt=""
+              className={`size-5 object-contain drop-shadow-sm group-hover/card:animate-store-coin-spin ${
+                selected ? 'animate-store-coin-spin' : ''
+              }`}
+            />
+            {priceAmount} CP
+          </span>
+        </div>
+
+        <div className="mt-auto flex items-center gap-2">
+          {canPreviewSound ? (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={playPreview}
+              aria-label={`Preview ${item.name} sound`}
+              title={isPlaying ? 'Playing preview' : 'Preview sound'}
+              className="rounded-md"
+            >
               <Volume2 className={`size-4 transition ${isPlaying ? 'animate-pulse text-primary' : ''}`} />
             </Button>
-            <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
-              {isPlaying ? 'Listening...' : 'Sound preview'}
-            </span>
-          </div>
+          ) : null}
 
-          <Button variant="default" size="sm" asChild>
-            <Link to={`/store/${item.id}`} className="inline-flex items-center gap-2">
-              View item <VscTriangleRight />
-            </Link>
+          <Button
+            variant="default"
+            size="lg"
+            onClick={toggleItem}
+            className="h-10 flex-1 rounded-md px-3 text-sm font-semibold"
+            aria-pressed={selected}
+            aria-label={`${selected ? 'Remove' : 'Add'} ${item.name} for ${formattedPrice}`}
+          >
+            {selected ? (
+              <Check className="size-4" />
+            ) : (
+              <img src="/store/one_coin.png" alt="" className="size-5 object-contain group-hover/button:animate-store-coin-spin" />
+            )}
+            <span>{selected ? 'Added' : `Add for ${formattedPrice}`}</span>
           </Button>
         </div>
       </div>
